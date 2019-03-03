@@ -31,16 +31,16 @@ app.get('/', (req, res) => {
         .then(
             response => {
                 console.log("Querying from remote DB")
-                let user = JSON.parse(response.text) 
+                let user = JSON.parse(response.text)
                 let length = Object.keys(user).length
-                res.render('index.ejs', {user: user, length: length})
+                res.render('index.ejs', { user: user, length: length })
             }
         )
         .catch(
             () => {
                 console.log("Remote not available, querying from local DB")
                 let user = blogRealm.objects('User')
-                res.render('index.ejs', {user: user, length: user.length})
+                res.render('index.ejs', { user: user, length: user.length })
             }
         )
 })
@@ -54,7 +54,7 @@ app.get('/register', (req, res) => {
 })
 
 app.get('/delete', (req, res) => {
-    blogRealm.write( () => {
+    blogRealm.write(() => {
         let users = blogRealm.objects('User')
         blogRealm.deleteAll()
     })
@@ -73,10 +73,10 @@ app.post('/register', (req, res) => {
     let username = req.body['username']
     let password = req.body['password']
 
-    blogRealm.write( () => {
+    blogRealm.write(() => {
         blogRealm.create('User', {
-            username: username, 
-            password: password, 
+            username: username,
+            password: password,
         })
     })
 
@@ -96,41 +96,39 @@ app.post('/login', (req, res) => {
     let password = req.body['password']
 
     agent.get("localhost:3003/login")
-    .ok(res => res.status < 500)
-    .send({
-        username: username,
-        password: password
-    })
-    .then(
-        response => {
-            console.log("Querying from remote DB")
-            
-            if(response.status == 200)
-            {
-                res.render('login-success.ejs', {username: username})
+        .ok(res => res.status < 500)
+        .send({
+            username: username,
+            password: password
+        })
+        .then(
+            response => {
+                console.log("Querying from remote DB")
+
+                if (response.status == 200) {
+                    res.render('login-success.ejs', { username: username })
+                }
+                else if (response.status == 404) {
+                    res.end("Data not found")
+                }
             }
-            else if( response.status == 404 )
-            {
-                res.end("Data not found")
+        )
+        .catch(
+            err => {
+                console.log(err)
+
+                let user = blogRealm.objects('User').filtered(
+                    'username = "' + username + '"' + ' AND ' + 'password = "' + password + '"'
+                )
+
+                if (user.length == 0) {
+                    res.send("Data not found")
+                }
+                else {
+                    res.render('login-success.ejs', { username: username })
+                }
             }
-        }
-    )
-    .catch(
-        err => {
-            console.log(err)
-            
-            let user = blogRealm.objects('User').filtered(
-                'username = "' + username + '"' + ' AND ' + 'password = "' + password + '"'
-            )
-            
-            if (user.length == 0){
-                res.send("Data not found")
-            }
-            else{
-                res.render('login-success.ejs', {username: username})
-            }
-        }
-    )
+        )
 })
 
 app.listen(3000, () => {
